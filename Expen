@@ -1,0 +1,624 @@
+<div id="ledger-root"></div>
+<style>
+  #ledger-root {
+    --ink: #2a2622;
+    --paper: #f6efe0;
+    --paper-line: #ddd0ae;
+    --spine: #1b2a41;
+    --spine-2: #24395a;
+    --brass: #b08d57;
+    --brass-light: #d9bd88;
+    --income: #3f6b4c;
+    --expense: #8b3a3a;
+    --muted: #8a8272;
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+    color: var(--ink);
+    background: var(--paper);
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+  #ledger-root * { box-sizing: border-box; }
+
+  .lg-topbar {
+    background: linear-gradient(180deg, var(--spine-2), var(--spine));
+    color: var(--paper);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 3px solid var(--brass);
+  }
+  .lg-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .lg-brand .mark {
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.02em;
+  }
+  .lg-brand .sub {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brass-light);
+  }
+  .lg-mode {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .lg-badge {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--brass);
+    color: var(--brass-light);
+  }
+  .lg-badge.on {
+    background: var(--brass);
+    color: var(--spine);
+    border-color: var(--brass);
+    font-weight: 700;
+  }
+  .lg-btn {
+    font-family: inherit;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    padding: 7px 14px;
+    border-radius: 3px;
+    border: 1px solid var(--brass);
+    background: transparent;
+    color: var(--paper);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .lg-btn:hover { background: var(--brass); color: var(--spine); }
+  .lg-btn:focus-visible { outline: 2px solid var(--brass-light); outline-offset: 2px; }
+  .lg-btn.primary { background: var(--brass); color: var(--spine); font-weight: 700; }
+  .lg-btn.primary:hover { background: var(--brass-light); }
+  .lg-btn.danger { border-color: var(--expense); color: #e8b9b9; }
+  .lg-btn.danger:hover { background: var(--expense); color: var(--paper); }
+
+  .lg-body { flex: 1; display: flex; flex-wrap: wrap; }
+
+  .lg-side {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--spine);
+    color: var(--paper);
+    padding: 22px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    border-right: 3px solid var(--brass);
+  }
+  .lg-stat .label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brass-light);
+    margin-bottom: 4px;
+  }
+  .lg-stat .value {
+    font-size: 24px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .lg-stat .value.income { color: #8fd4a3; }
+  .lg-stat .value.expense { color: #e8a1a1; }
+  .lg-divider { border: none; border-top: 1px solid rgba(217,189,136,0.3); margin: 0; }
+  .lg-filters { display: flex; flex-direction: column; gap: 8px; }
+  .lg-filters .label {
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brass-light);
+  }
+  .lg-filters select, .lg-filters input {
+    width: 100%;
+    font-family: inherit;
+    padding: 7px 8px;
+    border-radius: 3px;
+    border: 1px solid rgba(217,189,136,0.5);
+    background: rgba(255,255,255,0.06);
+    color: var(--paper);
+    font-size: 13px;
+  }
+  .lg-filters select option { color: #111; }
+
+  .lg-main { flex: 1; min-width: 280px; padding: 22px 24px 40px; }
+
+  .lg-page-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .lg-page-head h1 { font-size: 20px; margin: 0; letter-spacing: 0.01em; }
+  .lg-page-head .count { font-size: 12px; color: var(--muted); }
+
+  table.lg-table { width: 100%; border-collapse: collapse; }
+  table.lg-table thead th {
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 2px solid var(--ink);
+    padding: 0 8px 8px;
+  }
+  table.lg-table thead th.num { text-align: right; }
+  table.lg-table tbody tr { border-bottom: 1px solid var(--paper-line); }
+  table.lg-table tbody td { padding: 10px 8px; font-size: 14px; vertical-align: top; }
+  table.lg-table tbody td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.lg-table tbody td.num.income { color: var(--income); font-weight: 600; }
+  table.lg-table tbody td.num.expense { color: var(--expense); font-weight: 600; }
+  .lg-tag {
+    display: inline-block; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 2px 7px; border: 1px solid var(--paper-line); border-radius: 10px; color: var(--muted);
+  }
+  .lg-row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .lg-icon-btn {
+    font-family: inherit; font-size: 12px; background: none; border: 1px solid var(--paper-line);
+    border-radius: 3px; padding: 3px 8px; cursor: pointer; color: var(--ink);
+  }
+  .lg-icon-btn:hover { border-color: var(--ink); }
+  .lg-icon-btn:focus-visible { outline: 2px solid var(--spine); outline-offset: 1px; }
+
+  .lg-empty {
+    padding: 40px 10px; text-align: center; color: var(--muted); font-style: italic; font-size: 14px;
+  }
+
+  .lg-add-card {
+    margin-top: 18px; border: 1px solid var(--paper-line); border-radius: 4px; padding: 16px;
+    background: rgba(255,255,255,0.35);
+  }
+  .lg-add-card h2 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 12px; color: var(--muted); }
+  .lg-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; align-items: end; }
+  .lg-field label { display: block; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .lg-field input, .lg-field select {
+    width: 100%; font-family: inherit; font-size: 13px; padding: 7px 8px; border-radius: 3px; border: 1px solid var(--paper-line); background: var(--paper);
+  }
+  .lg-field input:focus-visible, .lg-field select:focus-visible, .lg-add-card select:focus-visible { outline: 2px solid var(--spine); outline-offset: 1px; }
+
+  .lg-overlay {
+    position: fixed; inset: 0; background: rgba(27,42,65,0.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px;
+  }
+  .lg-modal {
+    background: var(--paper); border: 1px solid var(--brass); border-radius: 5px; padding: 24px; width: 100%; max-width: 320px;
+  }
+  .lg-modal h2 { font-size: 15px; margin: 0 0 4px; }
+  .lg-modal p { font-size: 12px; color: var(--muted); margin: 0 0 14px; }
+  .lg-modal input { width: 100%; font-family: inherit; padding: 8px; border-radius: 3px; border: 1px solid var(--paper-line); margin-bottom: 8px; }
+  .lg-modal .err { color: var(--expense); font-size: 12px; min-height: 16px; margin-bottom: 8px; }
+  .lg-modal .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+  .lg-modal .row .lg-btn, .lg-modal .row button { color: var(--ink); border-color: var(--paper-line); }
+  .lg-modal .row .lg-btn.primary { background: var(--spine); color: var(--paper); border-color: var(--spine); }
+  .lg-modal .row .lg-btn.primary:hover { background: var(--spine-2); }
+  .lg-modal .link { background: none; border: none; font-family: inherit; font-size: 12px; color: var(--muted); text-decoration: underline; cursor: pointer; padding: 0; }
+
+  .lg-toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: var(--spine); color: var(--paper); padding: 9px 16px; border-radius: 4px; font-size: 13px;
+    border: 1px solid var(--brass); z-index: 30;
+  }
+
+  .lg-loading { padding: 60px 20px; text-align: center; color: var(--muted); font-style: italic; }
+
+  @media (max-width: 640px) {
+    .lg-side { width: 100%; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 3px solid var(--brass); }
+    .lg-side > * { flex: 1 1 140px; }
+    .lg-main { padding: 18px 14px 30px; }
+    table.lg-table thead th:nth-child(3), table.lg-table tbody td:nth-child(3) { display: none; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf-autotable.min.js"></script>
+<script>
+(function () {
+  const root = document.getElementById('ledger-root');
+  const CATS_INCOME = ['Dues', 'Donation', 'Event', 'Other Income'];
+  const CATS_EXPENSE = ['Supplies', 'Venue', 'Refreshments', 'Utilities', 'Other Expense'];
+  const KEY_ENTRIES = 'ledger:entries';
+  const KEY_PASSWORD = 'ledger:admin-password';
+  const DEFAULT_PASSWORD = 'admin123';
+
+  let state = {
+    loading: true,
+    entries: [],
+    isAdmin: false,
+    filterType: 'all',
+    filterQuery: '',
+    showPasswordModal: false,
+    showChangePassword: false,
+    passwordInput: '',
+    passwordError: '',
+    toast: null,
+  };
+
+  function uid() { return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function fmt(n) {
+    const sign = n < 0 ? '-' : '';
+    const abs = Math.abs(n);
+    const parts = abs.toFixed(2).split('.');
+    let intPart = parts[0];
+    let lastThree = intPart.length > 3 ? intPart.slice(-3) : intPart;
+    let rest = intPart.length > 3 ? intPart.slice(0, -3) : '';
+    if (rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+    const grouped = rest ? rest + ',' + lastThree : lastThree;
+    return sign + '\u20B9' + grouped + '.' + parts[1];
+  }
+
+  function showToast(msg) {
+    state.toast = msg;
+    render();
+    setTimeout(() => { state.toast = null; render(); }, 2200);
+  }
+
+  async function loadEntries() {
+    try {
+      const res = await window.storage.get(KEY_ENTRIES, true);
+      state.entries = res && res.value ? JSON.parse(res.value) : [];
+    } catch (e) {
+      state.entries = [];
+    }
+    state.loading = false;
+    render();
+  }
+
+  async function saveEntries() {
+    try {
+      await window.storage.set(KEY_ENTRIES, JSON.stringify(state.entries), true);
+    } catch (e) {
+      showToast('Could not save — try again');
+    }
+  }
+
+  async function getPassword() {
+    try {
+      const res = await window.storage.get(KEY_PASSWORD, true);
+      return res && res.value ? res.value : DEFAULT_PASSWORD;
+    } catch (e) {
+      return DEFAULT_PASSWORD;
+    }
+  }
+
+  async function setPassword(pw) {
+    try {
+      await window.storage.set(KEY_PASSWORD, pw, true);
+    } catch (e) {
+      showToast('Could not update password');
+    }
+  }
+
+  function fmtPlain(n) {
+    // Plain "Rs." formatting for the PDF (avoids font/glyph issues with the rupee symbol in jsPDF's default font)
+    const sign = n < 0 ? '-' : '';
+    const abs = Math.abs(n);
+    const parts = abs.toFixed(2).split('.');
+    let intPart = parts[0];
+    let lastThree = intPart.length > 3 ? intPart.slice(-3) : intPart;
+    let rest = intPart.length > 3 ? intPart.slice(0, -3) : '';
+    if (rest) rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+    const grouped = rest ? rest + ',' + lastThree : lastThree;
+    return sign + 'Rs. ' + grouped + '.' + parts[1];
+  }
+
+  function downloadPdf() {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      showToast('PDF library did not load — check your connection');
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const t = totals();
+    const list = filteredEntries();
+
+    doc.setFontSize(16);
+    doc.text('Club Ledger', 14, 18);
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text('Generated ' + new Date().toLocaleDateString('en-IN'), 14, 24);
+
+    doc.setFontSize(11);
+    doc.setTextColor(20);
+    doc.text('Balance: ' + fmtPlain(t.balance), 14, 34);
+    doc.text('Total income: ' + fmtPlain(t.income), 14, 40);
+    doc.text('Total expense: ' + fmtPlain(t.expense), 14, 46);
+
+    const rows = list.map(e => [e.date, e.description, e.category, e.type === 'income' ? 'Income' : 'Expense', fmtPlain(e.amount)]);
+
+    doc.autoTable({
+      head: [['Date', 'Description', 'Category', 'Type', 'Amount']],
+      body: rows,
+      startY: 54,
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [27, 42, 65] },
+      columnStyles: { 4: { halign: 'right' } },
+    });
+
+    doc.save('ledger-' + new Date().toISOString().slice(0, 10) + '.pdf');
+    showToast('PDF downloaded');
+  }
+
+  function totals() {
+    let income = 0, expense = 0;
+    for (const e of state.entries) {
+      if (e.type === 'income') income += e.amount; else expense += e.amount;
+    }
+    return { income, expense, balance: income - expense };
+  }
+
+  function filteredEntries() {
+    let list = state.entries.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.createdAt - a.createdAt);
+    if (state.filterType !== 'all') list = list.filter(e => e.type === state.filterType);
+    if (state.filterQuery.trim()) {
+      const q = state.filterQuery.trim().toLowerCase();
+      list = list.filter(e => (e.description || '').toLowerCase().includes(q) || (e.category || '').toLowerCase().includes(q));
+    }
+    return list;
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function render() {
+    if (state.loading) {
+      root.innerHTML = '<div class="lg-loading">Opening the ledger…</div>';
+      return;
+    }
+    const t = totals();
+    const list = filteredEntries();
+
+    root.innerHTML = `
+      <div class="lg-topbar">
+        <div class="lg-brand">
+          <span class="mark">Ledger</span>
+          <span class="sub">Club Accounts</span>
+        </div>
+        <div class="lg-mode">
+          <span class="lg-badge ${state.isAdmin ? 'on' : ''}">${state.isAdmin ? 'Admin mode' : 'View only'}</span>
+          ${state.isAdmin
+            ? `<button class="lg-btn" id="btn-lock">Lock</button>`
+            : `<button class="lg-btn" id="btn-unlock">Admin unlock</button>`}
+        </div>
+      </div>
+      <div class="lg-body">
+        <div class="lg-side">
+          <div class="lg-stat">
+            <div class="label">Balance</div>
+            <div class="value">${fmt(t.balance)}</div>
+          </div>
+          <hr class="lg-divider" />
+          <div class="lg-stat">
+            <div class="label">Total income</div>
+            <div class="value income">${fmt(t.income)}</div>
+          </div>
+          <div class="lg-stat">
+            <div class="label">Total expense</div>
+            <div class="value expense">${fmt(t.expense)}</div>
+          </div>
+          <hr class="lg-divider" />
+          <div class="lg-filters">
+            <div class="label">Filter</div>
+            <select id="filter-type">
+              <option value="all" ${state.filterType === 'all' ? 'selected' : ''}>All entries</option>
+              <option value="income" ${state.filterType === 'income' ? 'selected' : ''}>Income only</option>
+              <option value="expense" ${state.filterType === 'expense' ? 'selected' : ''}>Expense only</option>
+            </select>
+            <input id="filter-query" type="text" placeholder="Search description or category" value="${escapeHtml(state.filterQuery)}" />
+          </div>
+          ${state.isAdmin ? `<hr class="lg-divider" />
+            <button class="lg-btn" id="btn-download-pdf" style="width:100%;">Download PDF</button>
+            <button class="lg-btn" id="btn-change-pw" style="width:100%;">Change admin password</button>` : ''}
+        </div>
+        <div class="lg-main">
+          <div class="lg-page-head">
+            <h1>Transactions</h1>
+            <span class="count">${list.length} entr${list.length === 1 ? 'y' : 'ies'}</span>
+          </div>
+          ${list.length === 0
+            ? `<div class="lg-empty">No entries yet. ${state.isAdmin ? 'Add the first one below.' : 'Check back once the admin records some activity.'}</div>`
+            : `<table class="lg-table">
+                <thead><tr>
+                  <th>Date</th><th>Description</th><th>Category</th><th class="num">Amount</th>${state.isAdmin ? '<th></th>' : ''}
+                </tr></thead>
+                <tbody>
+                  ${list.map(e => `
+                    <tr data-id="${e.id}">
+                      <td>${escapeHtml(e.date)}</td>
+                      <td>${escapeHtml(e.description)}</td>
+                      <td><span class="lg-tag">${escapeHtml(e.category)}</span></td>
+                      <td class="num ${e.type}">${e.type === 'income' ? '+' : '−'}${fmt(e.amount)}</td>
+                      ${state.isAdmin ? `<td><div class="lg-row-actions">
+                        <button class="lg-icon-btn btn-delete" data-id="${e.id}">Delete</button>
+                      </div></td>` : ''}
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>`}
+          ${state.isAdmin ? `
+            <div class="lg-add-card">
+              <h2>Add entry</h2>
+              <form id="add-form">
+                <div class="lg-form-grid">
+                  <div class="lg-field">
+                    <label for="f-date">Date</label>
+                    <input id="f-date" type="date" required />
+                  </div>
+                  <div class="lg-field">
+                    <label for="f-type">Type</label>
+                    <select id="f-type">
+                      <option value="income">Income</option>
+                      <option value="expense">Expense</option>
+                    </select>
+                  </div>
+                  <div class="lg-field">
+                    <label for="f-category">Category</label>
+                    <select id="f-category"></select>
+                  </div>
+                  <div class="lg-field">
+                    <label for="f-description">Description</label>
+                    <input id="f-description" type="text" placeholder="e.g. Monthly dues — August" required />
+                  </div>
+                  <div class="lg-field">
+                    <label for="f-amount">Amount</label>
+                    <input id="f-amount" type="number" step="0.01" min="0" placeholder="0.00" required />
+                  </div>
+                  <div class="lg-field">
+                    <button class="lg-btn primary" type="submit" style="width:100%;">Add entry</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+      ${state.showPasswordModal ? `
+        <div class="lg-overlay" id="pw-overlay">
+          <div class="lg-modal">
+            <h2>Admin unlock</h2>
+            <p>Enter the admin password to add or remove entries.</p>
+            <input id="pw-input" type="password" placeholder="Password" autocomplete="off" />
+            <div class="err">${escapeHtml(state.passwordError)}</div>
+            <div class="row">
+              <button class="lg-btn" id="pw-cancel" type="button">Cancel</button>
+              <button class="lg-btn primary" id="pw-submit" type="button">Unlock</button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+      ${state.showChangePassword ? `
+        <div class="lg-overlay" id="cpw-overlay">
+          <div class="lg-modal">
+            <h2>Change admin password</h2>
+            <p>This password is shared — anyone who enters it can edit the ledger.</p>
+            <input id="cpw-input" type="password" placeholder="New password" autocomplete="off" />
+            <div class="err">${escapeHtml(state.passwordError)}</div>
+            <div class="row">
+              <button class="lg-btn" id="cpw-cancel" type="button">Cancel</button>
+              <button class="lg-btn primary" id="cpw-submit" type="button">Save</button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+      ${state.toast ? `<div class="lg-toast">${escapeHtml(state.toast)}</div>` : ''}
+    `;
+
+    attachHandlers();
+  }
+
+  function attachHandlers() {
+    const byId = id => root.querySelector('#' + id);
+
+    const unlockBtn = byId('btn-unlock');
+    if (unlockBtn) unlockBtn.onclick = () => { state.showPasswordModal = true; state.passwordInput = ''; state.passwordError = ''; render(); setTimeout(() => { const i = byId('pw-input'); if (i) i.focus(); }, 0); };
+
+    const lockBtn = byId('btn-lock');
+    if (lockBtn) lockBtn.onclick = () => { state.isAdmin = false; showToast('Locked — view only'); };
+
+    const filterType = byId('filter-type');
+    if (filterType) filterType.onchange = (e) => { state.filterType = e.target.value; render(); };
+
+    const filterQuery = byId('filter-query');
+    if (filterQuery) {
+      filterQuery.oninput = (e) => { state.filterQuery = e.target.value; };
+      filterQuery.addEventListener('keyup', (e) => { if (e.key === 'Enter') render(); });
+      filterQuery.addEventListener('blur', () => render());
+    }
+
+    root.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        state.entries = state.entries.filter(e => e.id !== id);
+        render();
+        await saveEntries();
+        showToast('Entry deleted');
+      };
+    });
+
+    const catSelect = byId('f-category');
+    const typeSelect = byId('f-type');
+    function populateCategories() {
+      if (!catSelect || !typeSelect) return;
+      const cats = typeSelect.value === 'income' ? CATS_INCOME : CATS_EXPENSE;
+      catSelect.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    }
+    if (typeSelect) { populateCategories(); typeSelect.onchange = populateCategories; }
+
+    const addForm = byId('add-form');
+    if (addForm) {
+      addForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const date = byId('f-date').value;
+        const type = byId('f-type').value;
+        const category = byId('f-category').value;
+        const description = byId('f-description').value.trim();
+        const amount = parseFloat(byId('f-amount').value);
+        if (!date || !description || isNaN(amount) || amount <= 0) {
+          showToast('Please fill in every field with a valid amount');
+          return;
+        }
+        state.entries.push({ id: uid(), date, type, category, description, amount, createdAt: Date.now() });
+        render();
+        await saveEntries();
+        showToast('Entry added');
+      };
+    }
+
+    const pwCancel = byId('pw-cancel');
+    if (pwCancel) pwCancel.onclick = () => { state.showPasswordModal = false; render(); };
+    const pwSubmit = byId('pw-submit');
+    const pwInput = byId('pw-input');
+    if (pwSubmit) {
+      pwSubmit.onclick = async () => {
+        const entered = pwInput.value;
+        const real = await getPassword();
+        if (entered === real) {
+          state.isAdmin = true;
+          state.showPasswordModal = false;
+          state.passwordError = '';
+          render();
+          showToast('Admin mode unlocked');
+        } else {
+          state.passwordError = 'Incorrect password';
+          render();
+        }
+      };
+    }
+    if (pwInput) pwInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') pwSubmit.click(); });
+
+    const downloadBtn = byId('btn-download-pdf');
+    if (downloadBtn) downloadBtn.onclick = () => downloadPdf();
+
+    const changePwBtn = byId('btn-change-pw');
+    if (changePwBtn) changePwBtn.onclick = () => { state.showChangePassword = true; state.passwordError = ''; render(); setTimeout(() => { const i = byId('cpw-input'); if (i) i.focus(); }, 0); };
+
+    const cpwCancel = byId('cpw-cancel');
+    if (cpwCancel) cpwCancel.onclick = () => { state.showChangePassword = false; render(); };
+    const cpwSubmit = byId('cpw-submit');
+    const cpwInput = byId('cpw-input');
+    if (cpwSubmit) {
+      cpwSubmit.onclick = async () => {
+        const val = cpwInput.value;
+        if (!val || val.length < 4) {
+          state.passwordError = 'Use at least 4 characters';
+          render();
+          return;
+        }
+        await setPassword(val);
+        state.showChangePassword = false;
+        render();
+        showToast('Password updated');
+      };
+    }
+    if (cpwInput) cpwInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') cpwSubmit.click(); });
+  }
+
+  loadEntries();
+})();
+</script>
